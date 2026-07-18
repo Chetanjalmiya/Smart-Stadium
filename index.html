@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Stadium — Control Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --night:#0A0E1A;
+    --panel:#121A2C;
+    --panel2:#161F35;
+    --line:#26314C;
+    --ink:#EEF2F8;
+    --ink-dim:#8C97B4;
+    --turf:#2FD480;
+    --amber:#F5A623;
+    --crimson:#E5484D;
+    --blue:#5B8CFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(91,140,255,.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(47,212,128,.08), transparent 55%),
+      var(--night);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--turf);color:#06140D;}
+  a{color:inherit;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Bebas Neue',sans-serif; letter-spacing:.03em;}
+
+  /* ===== Top bar ===== */
+  header.topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:18px;
+    padding:14px 26px;
+    background:rgba(10,14,26,.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px;
+    background:conic-gradient(from 220deg, var(--turf), var(--blue), var(--turf));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue'; font-size:18px; color:#06140D;
+  }
+  .brand-name{font-family:'Bebas Neue'; font-size:22px; letter-spacing:.05em; line-height:1;}
+  .brand-sub{font-size:10px; color:var(--ink-dim); letter-spacing:.14em; text-transform:uppercase;}
+
+  nav.gates{
+    display:flex; gap:2px; overflow-x:auto; scrollbar-width:none;
+    flex:1;
+  }
+  nav.gates::-webkit-scrollbar{display:none;}
+  nav.gates a{
+    flex-shrink:0;
+    font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-dim); text-decoration:none;
+    padding:8px 12px; border-radius:8px; white-space:nowrap;
+    border:1px solid transparent;
+    transition:.15s;
+  }
+  nav.gates a:hover{color:var(--ink); background:var(--panel2); border-color:var(--line);}
+  nav.gates a .gate-no{color:var(--turf); font-family:'JetBrains Mono'; margin-right:6px;}
+
+  .status-pill{
+    flex-shrink:0;
+    display:flex; align-items:center; gap:7px;
+    font-size:11px; padding:7px 12px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel2);
+    white-space:nowrap;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-dim);}
+  .dot.live{background:var(--turf); box-shadow:0 0 0 0 rgba(47,212,128,.6); animation:pulse 1.8s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(47,212,128,.55);}
+    70%{box-shadow:0 0 0 8px rgba(47,212,128,0);}
+    100%{box-shadow:0 0 0 0 rgba(47,212,128,0);}
+  }
+
+  /* ===== Hero scoreboard ===== */
+  .hero{
+    padding:38px 26px 26px;
+    border-bottom:1px solid var(--line);
+  }
+  .hero-top{display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap; margin-bottom:22px;}
+  .hero-eyebrow{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--turf); margin-bottom:8px;}
+  .hero h1{font-family:'Bebas Neue'; font-size:clamp(32px,5vw,54px); line-height:.95; margin:0; letter-spacing:.02em;}
+  .hero p.lead{color:var(--ink-dim); max-width:520px; margin:10px 0 0; font-size:14.5px; line-height:1.6;}
+
+  .scoreboard{
+    display:flex; align-items:stretch; gap:0;
+    background:linear-gradient(180deg, var(--panel), var(--panel2));
+    border:1px solid var(--line); border-radius:16px;
+    padding:20px 24px; overflow:hidden; position:relative;
+  }
+  .scoreboard::before{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.02) 40px);
+    pointer-events:none;
+  }
+  .sb-live{display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.14em; color:var(--crimson); text-transform:uppercase; margin-bottom:10px;}
+  .sb-dot{width:7px;height:7px;border-radius:50%;background:var(--crimson); animation:pulse 1.4s infinite;}
+  .sb-teams{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+  .sb-team{display:flex; flex-direction:column; min-width:120px;}
+  .sb-team .name{font-size:13px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;}
+  .sb-score{font-family:'Bebas Neue'; font-size:56px; line-height:.9;}
+  .sb-vs{font-family:'Bebas Neue'; font-size:22px; color:var(--ink-dim); padding:0 4px;}
+  .sb-meta{margin-left:auto; text-align:right; font-size:12px; color:var(--ink-dim);}
+  .sb-meta .minute{color:var(--turf); font-family:'JetBrains Mono'; font-size:15px;}
+
+  /* ===== Layout ===== */
+  main{max-width:1180px; margin:0 auto; padding:34px 26px 90px;}
+  section{scroll-margin-top:76px; padding:46px 0; border-bottom:1px solid var(--line);}
+  section:last-child{border-bottom:none;}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px; flex-wrap:wrap;}
+  .sec-no{font-family:'JetBrains Mono'; color:var(--turf); font-size:13px;}
+  .sec-title{font-family:'Bebas Neue'; font-size:30px; letter-spacing:.02em;}
+  .sec-desc{color:var(--ink-dim); font-size:13.5px; margin:0 0 22px; max-width:620px; line-height:1.6;}
+
+  .grid{display:grid; gap:16px;}
+  .grid-2{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:860px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .sb-teams{gap:14px;} .sb-score{font-size:42px;} }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px;
+  }
+  .card h3{margin:0 0 4px; font-size:15px; font-weight:700;}
+  .card p{margin:0; color:var(--ink-dim); font-size:13px; line-height:1.55;}
+  label{display:block; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-dim); margin:12px 0 6px;}
+  label:first-child{margin-top:0;}
+  input,select,textarea{
+    width:100%; background:var(--night); border:1px solid var(--line); color:var(--ink);
+    padding:10px 12px; border-radius:9px; font-family:'Inter'; font-size:13.5px;
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--blue); outline-offset:1px; border-color:transparent;}
+  textarea{resize:vertical; min-height:64px;}
+  button{
+    cursor:pointer; border:none; border-radius:9px; padding:10px 16px;
+    font-family:'Inter'; font-weight:700; font-size:13px; letter-spacing:.01em;
+  }
+  button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .btn-primary{background:var(--turf); color:#06140D;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  .btn-ghost:hover{background:var(--panel2);}
+  .btn-danger{background:var(--crimson); color:#2a0405;}
+  .btn-block{width:100%;}
+
+  .tag{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;}
+  .tag-turf{background:rgba(47,212,128,.14); color:var(--turf);}
+  .tag-amber{background:rgba(245,166,35,.14); color:var(--amber);}
+  .tag-crimson{background:rgba(229,72,77,.14); color:var(--crimson);}
+  .tag-blue{background:rgba(91,140,255,.14); color:var(--blue);}
+  .tag-dim{background:var(--panel2); color:var(--ink-dim);}
+
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .list{display:flex; flex-direction:column; gap:8px;}
+  .list-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 13px; background:var(--panel2); border:1px solid var(--line); border-radius:10px; font-size:13px;
+  }
+  .list-item .meta{color:var(--ink-dim); font-size:11.5px;}
+  .empty{color:var(--ink-dim); font-size:13px; padding:16px; text-align:center; border:1px dashed var(--line); border-radius:10px;}
+
+  /* gauge */
+  .gauge-wrap{margin-bottom:14px;}
+  .gauge-label{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;}
+  .gauge-track{height:9px; border-radius:6px; background:var(--night); border:1px solid var(--line); overflow:hidden;}
+  .gauge-fill{height:100%; border-radius:6px; transition:width .5s ease;}
+
+  /* seat map */
+  .seat-map{display:grid; grid-template-columns:repeat(10,1fr); gap:5px;}
+  .seat{
+    aspect-ratio:1; border-radius:5px; background:var(--panel2); border:1px solid var(--line);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:8px; color:var(--ink-dim); font-family:'JetBrains Mono';
+    transition:.12s;
+  }
+  .seat.available:hover{border-color:var(--turf); color:var(--turf);}
+  .seat.occupied{background:rgba(229,72,77,.14); color:var(--crimson); cursor:not-allowed;}
+  .seat.selected{background:var(--turf); color:#06140D; border-color:var(--turf);}
+
+  /* chat */
+  .chat-window{
+    background:var(--night); border:1px solid var(--line); border-radius:12px;
+    padding:14px; height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px;
+  }
+  .msg{max-width:82%; padding:9px 12px; border-radius:12px; font-size:13px; line-height:1.5;}
+  .msg.user{align-self:flex-end; background:var(--blue); color:#0A0E1A; border-bottom-right-radius:3px;}
+  .msg.bot{align-self:flex-start; background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:3px;}
+  .msg.bot .conf{display:block; margin-top:5px; font-size:10px; color:var(--ink-dim);}
+
+  /* qr */
+  .qr-box{display:flex; gap:18px; align-items:center; flex-wrap:wrap;}
+  #qrcode{background:#fff; padding:10px; border-radius:10px; flex-shrink:0;}
+  #qrcode img{display:block;}
+
+  /* analytics bars */
+  .bars{display:flex; align-items:flex-end; gap:10px; height:130px; padding-top:10px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+  .bar{width:100%; border-radius:6px 6px 0 0; background:linear-gradient(180deg, var(--blue), rgba(91,140,255,.3)); transition:height .6s ease;}
+  .bar-col span{font-size:10px; color:var(--ink-dim); font-family:'JetBrains Mono';}
+
+  .stars{display:flex; gap:6px; font-size:26px;}
+  .star{cursor:pointer; color:var(--line); transition:.1s;}
+  .star.on{color:var(--amber);}
+
+  .accordion-item{border-bottom:1px solid var(--line);}
+  .accordion-item:last-child{border-bottom:none;}
+  .accordion-head{display:flex; justify-content:space-between; align-items:center; padding:14px 2px; cursor:pointer; font-weight:700; font-size:14px;}
+  .accordion-body{max-height:0; overflow:hidden; transition:max-height .25s ease; color:var(--ink-dim); font-size:13px; line-height:1.6;}
+  .accordion-body inner{display:block; padding:0 2px 14px;}
+  .accordion-item.open .accordion-body{max-height:200px;}
+  .chev{transition:.2s;}
+  .accordion-item.open .chev{transform:rotate(45deg);}
+
+  .toast-wrap{position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;}
+  .toast{
+    background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--turf);
+    padding:12px 16px; border-radius:9px; font-size:13px; min-width:220px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    animation:slidein .25s ease;
+  }
+  .toast.err{border-left-color:var(--crimson);}
+  @keyframes slidein{from{transform:translateX(30px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+
+  footer{padding:30px 26px; text-align:center; color:var(--ink-dim); font-size:12px; border-top:1px solid var(--line);}
+  footer .mono{color:var(--ink-dim);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">S</div>
+    <div>
+      <div class="brand-name">SMART&nbsp;STADIUM</div>
+      <div class="brand-sub">Control Room</div>
+    </div>
+  </div>
+  <nav class="gates" id="gateNav"></nav>
+  <div class="status-pill"><span class="dot" id="connDot"></span><span id="connText">checking API…</span></div>
+</header>
+
+<div class="hero">
+  <div class="hero-top">
+    <div>
+      <div class="hero-eyebrow">Match day operations</div>
+      <h1>Everything the<br>stadium sees, live.</h1>
+      <p class="lead">One screen for every module of the backend — assistant, gates, tickets, crowd, parking, food, safety and the numbers behind them. Connects to your running API automatically; falls back to sample data when it's offline.</p>
+    </div>
+  </div>
+
+  <div class="scoreboard">
+    <div>
+      <div class="sb-live"><span class="sb-dot"></span>Live now</div>
+      <div class="sb-teams">
+        <div class="sb-team">
+          <span class="name" id="sbHome">Falcons FC</span>
+          <span class="sb-score display" id="sbHomeScore">1</span>
+        </div>
+        <span class="sb-vs">–</span>
+        <div class="sb-team">
+          <span class="name" id="sbAway">Warriors FC</span>
+          <span class="sb-score display" id="sbAwayScore">0</span>
+        </div>
+        <div class="sb-meta">
+          <div>Main Arena</div>
+          <div class="minute" id="sbMinute">35′</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- 1. AI Fan Assistant -->
+  <section id="assistant">
+    <div class="sec-head"><span class="sec-no">Gate 01</span><span class="sec-title">AI Fan Assistant</span></div>
+    <p class="sec-desc">Ask anything a fan would ask at the help desk. Matches your question against the FAQ knowledge base and logs every exchange.</p>
+    <div class="card">
+      <div class="chat-window" id="chatWindow"></div>
+      <div class="row" style="gap:8px;">
+        <input id="chatInput" placeholder="e.g. how much does parking cost?" onkeydown="if(event.key==='Enter')askAssistant()">
+        <button class="btn-primary" onclick="askAssistant()">Ask</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Navigation -->
+  <section id="navigation">
+    <div class="sec-head"><span class="sec-no">Gate 02</span><span class="sec-title">Stadium Navigation</span></div>
+    <p class="sec-desc">Points of interest across the venue, with the walking route calculated between any two.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Points of interest</h3>
+        <div class="list" id="navList" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h3>Plan a route</h3>
+        <label>From</label>
+        <select id="navFrom"></select>
+        <label>To</label>
+        <select id="navTo"></select>
+        <button class="btn-primary btn-block" style="margin-top:14px;" onclick="calcRoute()">Calculate route</button>
+        <div id="routeResult" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Smart Ticket -->
+  <section id="tickets">
+    <div class="sec-head"><span class="sec-no">Gate 03</span><span class="sec-title">Smart Ticket · QR Code</span></div>
+    <p class="sec-desc">Issue a ticket and get a real, scannable QR code back. Verify it at the gate to check the holder in.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Issue a ticket</h3>
+        <label>Holder name</label>
+        <input id="tkName" value="Sam Fan">
+        <label>Seat number</label>
+        <input id="tkSeat" value="A1-01">
+        <label>Price ($)</label>
+        <input id="tkPrice" type="number" value="45">
+        <button class="btn-primary btn-block" style="margin-top:14px;" onclick="issueTicket()">Generate ticket</button>
+      </div>
+      <div class="card">
+        <h3>Your ticket</h3>
+        <div class="qr-box" id="qrArea" style="margin-top:8px;">
+          <div class="empty" style="width:100%;">No ticket issued yet</div>
+        </div>
+        <button class="btn-ghost btn-block" id="verifyBtn" style="margin-top:14px; display:none;" onclick="verifyTicket()">Verify &amp; check in at gate</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Live Match -->
+  <section id="matches">
+    <div class="sec-head"><span class="sec-no">Gate 04</span><span class="sec-title">Live Match &amp; Schedule</span></div>
+    <p class="sec-desc">Everything currently on the pitch, and what's coming up next.</p>
+    <div class="grid grid-2">
+      <div class="card"><h3>Live &amp; recent</h3><div class="list" id="liveList" style="margin-top:12px;"></div></div>
+      <div class="card"><h3>Upcoming fixtures</h3><div class="list" id="scheduleList" style="margin-top:12px;"></div></div>
+    </div>
+  </section>
+
+  <!-- 5. Crowd -->
+  <section id="crowd">
+    <div class="sec-head"><span class="sec-no">Gate 05</span><span class="sec-title">Crowd Density</span></div>
+    <p class="sec-desc">Live occupancy per zone, colour-coded by risk: green is normal, amber is busy, red needs attention.</p>
+    <div class="card" id="crowdCard"></div>
+  </section>
+
+  <!-- 6. Parking -->
+  <section id="parking">
+    <div class="sec-head"><span class="sec-no">Gate 06</span><span class="sec-title">Smart Parking</span></div>
+    <p class="sec-desc">Tap an open slot to book it for a vehicle. Tap it again to release the space.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="row"><h3>Zone P1</h3><span class="tag tag-turf" id="parkSummary"></span></div>
+        <div class="seat-map" id="parkGrid" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h3>Book selected slot</h3>
+        <label>Vehicle number</label>
+        <input id="pkVehicle" placeholder="e.g. XYZ-1234">
+        <label>Visitor name</label>
+        <input id="pkName" placeholder="e.g. Jane Doe">
+        <button class="btn-primary btn-block" style="margin-top:14px;" onclick="bookParking()">Book slot <span id="pkSelected" class="mono"></span></button>
+        <p style="margin-top:10px;">Select an available (green) slot on the left first.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Food -->
+  <section id="food">
+    <div class="sec-head"><span class="sec-no">Gate 07</span><span class="sec-title">Food &amp; Beverage</span></div>
+    <p class="sec-desc">Order from the concourse menu, straight to your seat.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Menu</h3>
+        <div class="list" id="menuList" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h3>Your order</h3>
+        <div class="list" id="cartList" style="margin-top:4px;"></div>
+        <div class="row" style="margin-top:14px; font-weight:700;"><span>Total</span><span class="mono" id="cartTotal">$0.00</span></div>
+        <button class="btn-primary btn-block" style="margin-top:12px;" onclick="placeOrder()">Place order</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Weather -->
+  <section id="weather">
+    <div class="sec-head"><span class="sec-no">Gate 08</span><span class="sec-title">Weather Alerts</span></div>
+    <p class="sec-desc">Advisories issued to fans and staff, most severe first.</p>
+    <div class="list" id="weatherList"></div>
+  </section>
+
+  <!-- 9. SOS -->
+  <section id="sos">
+    <div class="sec-head"><span class="sec-no">Gate 09</span><span class="sec-title">Emergency SOS</span></div>
+    <p class="sec-desc">Raises an alert to the nearest safety team immediately. Use only for genuine emergencies.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <label>Your name</label>
+        <input id="sosName" value="Sam Fan">
+        <label>Contact number</label>
+        <input id="sosPhone" value="+1 555 0100">
+        <label>Type</label>
+        <select id="sosType">
+          <option value="medical">Medical</option>
+          <option value="security">Security</option>
+          <option value="fire">Fire</option>
+          <option value="lost_child">Lost child</option>
+          <option value="other">Other</option>
+        </select>
+        <label>Location</label>
+        <input id="sosLoc" value="Section A, Row 3">
+        <button class="btn-danger btn-block" style="margin-top:14px;" onclick="sendSOS()">Send SOS now</button>
+      </div>
+      <div class="card"><h3>Active requests</h3><div class="list" id="sosList" style="margin-top:12px;"></div></div>
+    </div>
+  </section>
+
+  <!-- 10. Lost & Found -->
+  <section id="lostfound">
+    <div class="sec-head"><span class="sec-no">Gate 10</span><span class="sec-title">Lost &amp; Found</span></div>
+    <p class="sec-desc">Report an item, or search what's already been handed in.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <label>Type</label>
+        <select id="lfType"><option value="lost">Lost</option><option value="found">Found</option></select>
+        <label>Item</label>
+        <input id="lfItem" placeholder="e.g. Blue backpack">
+        <label>Location</label>
+        <input id="lfLoc" placeholder="e.g. Gate A">
+        <button class="btn-primary btn-block" style="margin-top:14px;" onclick="reportItem()">Report item</button>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Reports</h3><input id="lfSearch" placeholder="search…" style="width:130px;" oninput="renderLF()"></div>
+        <div class="list" id="lfList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Notifications -->
+  <section id="notifications">
+    <div class="sec-head"><span class="sec-no">Gate 11</span><span class="sec-title">Notifications</span></div>
+    <p class="sec-desc">Stadium-wide broadcasts. Unread items are marked with a dot.</p>
+    <div class="list" id="notifList"></div>
+  </section>
+
+  <!-- 12. Seat Finder -->
+  <section id="seats">
+    <div class="sec-head"><span class="sec-no">Gate 12</span><span class="sec-title">Seat Finder</span></div>
+    <p class="sec-desc">Look up any seat by number, or filter by section and accessibility.</p>
+    <div class="card">
+      <div class="row" style="gap:10px; flex-wrap:wrap;">
+        <input id="seatSearch" placeholder="Search seat, e.g. A1-01" style="flex:1; min-width:180px;" oninput="renderSeats()">
+        <label style="display:flex; align-items:center; gap:6px; margin:0; text-transform:none; font-size:13px; color:var(--ink);">
+          <input type="checkbox" id="seatAccessible" style="width:auto;" onchange="renderSeats()"> Accessible only
+        </label>
+      </div>
+      <div class="seat-map" id="seatGrid" style="margin-top:16px;"></div>
+      <p style="margin-top:12px;"><span class="tag tag-turf">available</span> &nbsp;<span class="tag tag-crimson">occupied</span></p>
+    </div>
+  </section>
+
+  <!-- 13. Stadium Info -->
+  <section id="info">
+    <div class="sec-head"><span class="sec-no">Gate 13</span><span class="sec-title">Stadium Information</span></div>
+    <p class="sec-desc">Hours, rules, contact details, and amenities around the venue.</p>
+    <div class="grid grid-2">
+      <div class="card"><div id="infoAccordion"></div></div>
+      <div class="card"><h3>Amenities</h3><div class="list" id="amenityList" style="margin-top:12px;"></div></div>
+    </div>
+  </section>
+
+  <!-- 14. Feedback -->
+  <section id="feedback">
+    <div class="sec-head"><span class="sec-no">Gate 14</span><span class="sec-title">Feedback</span></div>
+    <p class="sec-desc">Tell us how the visit went. Ratings feed straight into the analytics dashboard below.</p>
+    <div class="card" style="max-width:420px;">
+      <label>Rating</label>
+      <div class="stars" id="starRow"></div>
+      <label>Comments</label>
+      <textarea id="fbComment" placeholder="Optional"></textarea>
+      <button class="btn-primary btn-block" style="margin-top:14px;" onclick="submitFeedback()">Submit feedback</button>
+    </div>
+  </section>
+
+  <!-- 15. Analytics -->
+  <section id="analytics">
+    <div class="sec-head"><span class="sec-no">Gate 15</span><span class="sec-title">Analytics</span></div>
+    <p class="sec-desc">A live rollup across every module — updates as you use the dashboard above.</p>
+    <div class="grid grid-4" id="kpiGrid"></div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card"><h3>Revenue by source</h3><div class="bars" id="barRevenue"></div></div>
+      <div class="card"><h3>Average feedback rating</h3><div class="bars" id="barRating"></div></div>
+    </div>
+  </section>
+
+  <!-- 16 & 17. Admin / Health -->
+  <section id="admin">
+    <div class="sec-head"><span class="sec-no">Gate 16–17</span><span class="sec-title">Admin &amp; Health</span></div>
+    <p class="sec-desc">System overview, gated by the admin key, plus the live health probe.</p>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Admin overview</h3>
+        <label>X-Admin-Key</label>
+        <div class="row" style="gap:8px;">
+          <input id="adminKey" placeholder="admin-secret-key-change-me">
+          <button class="btn-ghost" onclick="loadAdmin()">Unlock</button>
+        </div>
+        <div class="list" id="adminList" style="margin-top:14px;"></div>
+      </div>
+      <div class="card">
+        <h3>Health check</h3>
+        <div class="list">
+          <div class="list-item"><span>API status</span><span class="tag" id="healthStatus">—</span></div>
+          <div class="list-item"><span>Database</span><span class="tag" id="healthDb">—</span></div>
+          <div class="list-item"><span>Version</span><span class="mono" id="healthVersion">—</span></div>
+          <div class="list-item"><span>Checked</span><span class="mono" id="healthTime">—</span></div>
+        </div>
+        <button class="btn-ghost btn-block" style="margin-top:12px;" onclick="checkHealth(true)">Re-check now</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Smart Stadium AI System — control room view · built for the FastAPI backend at <span class="mono">/api/v1</span> · falls back to sample data when the API isn't reachable
+</footer>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============ CONFIG & STATE ============ */
+const API_BASE = "http://localhost:8000/api/v1";
+let LIVE_API = false;
+
+const MODULES = [
+  ["assistant","Assistant"],["navigation","Navigate"],["tickets","Tickets"],
+  ["matches","Matches"],["crowd","Crowd"],["parking","Parking"],["food","Food"],
+  ["weather","Weather"],["sos","SOS"],["lostfound","Lost&Found"],["notifications","Notify"],
+  ["seats","Seats"],["info","Info"],["feedback","Feedback"],["analytics","Analytics"],["admin","Admin"]
+];
+document.getElementById("gateNav").innerHTML = MODULES.map((m,i)=>
+  `<a href="#${m[0]}"><span class="gate-no">${String(i+1).padStart(2,'0')}</span>${m[1]}</a>`).join("");
+
+function toast(msg, isErr=false){
+  const el = document.createElement("div");
+  el.className = "toast" + (isErr ? " err" : "");
+  el.textContent = msg;
+  document.getElementById("toastWrap").appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n){ return "$" + Number(n).toFixed(2); }
+
+/* ============ DEMO DATA (fallback when API is offline) ============ */
+const demo = {
+  matches: [
+    {home_team:"Falcons FC", away_team:"Warriors FC", status:"live", home_score:1, away_score:0, current_minute:35, venue:"Main Arena"},
+    {home_team:"Titans SC", away_team:"Eagles United", status:"scheduled", scheduled_time:"Tomorrow, 7:00 PM", venue:"Main Arena"},
+    {home_team:"Comets FC", away_team:"Hawks United", status:"scheduled", scheduled_time:"Sat, 5:30 PM", venue:"Main Arena"}
+  ],
+  nav: [
+    {id:1,name:"Main Entrance",category:"entrance",zone:"North"},
+    {id:2,name:"Gate A",category:"gate",zone:"North"},
+    {id:3,name:"Gate B",category:"gate",zone:"East"},
+    {id:4,name:"Food Court",category:"food",zone:"Central"},
+    {id:5,name:"First Aid Station",category:"medical",zone:"Central"},
+    {id:6,name:"Parking Zone P1",category:"parking",zone:"South"}
+  ],
+  crowd: [
+    {zone:"North Stand", pct:42},{zone:"South Stand", pct:68},{zone:"East Concourse", pct:91},{zone:"West Concourse", pct:24}
+  ],
+  parking: Array.from({length:20},(_,i)=>({slot:`P1-${String(i+1).padStart(2,'0')}`, occupied: [2,5,11,14,17].includes(i)})),
+  menu: [
+    {id:1,name:"Stadium Burger",price:8.5,category:"Main Course"},
+    {id:2,name:"Loaded Nachos",price:6.0,category:"Snacks"},
+    {id:3,name:"Cola (500ml)",price:3.0,category:"Beverages"},
+    {id:4,name:"Veggie Wrap",price:7.0,category:"Main Course"},
+    {id:5,name:"Popcorn",price:4.5,category:"Snacks"}
+  ],
+  weather: [
+    {title:"Heavy Rain Expected", description:"Rain likely after 8 PM — covered seating recommended.", severity:"high"},
+    {title:"High UV Index", description:"Sun protection advised for uncovered stands until 5 PM.", severity:"moderate"}
+  ],
+  lostfound: [
+    {item_type:"lost", item_name:"Blue Backpack", location:"Gate A", status:"reported"},
+    {item_type:"found", item_name:"Red Wallet", location:"Section C", status:"reported"}
+  ],
+  notifications: [
+    {title:"Gates Now Open", message:"All gates are open. Please have your QR ticket ready.", category:"general", read:false},
+    {title:"Kickoff in 15 Minutes", message:"Please make your way to your seats.", category:"match", read:false},
+    {title:"Parking Zone P2 Full", message:"Please use Zone P1 or P3.", category:"parking", read:true}
+  ],
+  seats: (()=>{
+    const out=[]; const sections=["A","B","C"];
+    sections.forEach(s=>{ for(let r=1;r<=3;r++){ for(let n=1;n<=5;n++){
+      out.push({seat:`${s}${r}-${n}`, section:`Section ${s}`, accessible:n===1, occupied: Math.random()<0.28});
+    }}});
+    return out;
+  })(),
+  info: [
+    {key:"hours", title:"Operating Hours", content:"Gates open 3 hours before kickoff and close 2 hours after the final whistle."},
+    {key:"rules", title:"Stadium Rules", content:"No outside food or drinks. Bags larger than A4 size are not permitted."},
+    {key:"contact", title:"Contact & Support", content:"Visit any information desk, or call +1-800-555-0199."}
+  ],
+  amenities: [
+    {name:"North Restroom", category:"restroom", location:"North Wing, Level 1"},
+    {name:"Fan Store", category:"retail", location:"Main Concourse"},
+    {name:"ATM", category:"services", location:"Near Gate B"}
+  ],
+  faq: [
+    {keywords:"parking cost price fee", answer:"Parking costs $5 per hour. Book a slot in the Smart Parking section above."},
+    {keywords:"food menu eat drink beverage", answer:"Burgers, wraps, nachos, popcorn and drinks are available at every stall — see the Food & Beverage menu."},
+    {keywords:"ticket qr entry gate check in", answer:"Show your QR code at any gate scanner, or verify it right here in the Smart Ticket section."},
+    {keywords:"lost item found belongings", answer:"Report it in the Lost & Found section with a description — staff will help track it down."},
+    {keywords:"emergency help medical sos safety", answer:"Use the Emergency SOS section immediately with your location. The safety team responds right away."},
+    {keywords:"restroom toilet washroom bathroom", answer:"Restrooms are in the North and South wings on every level — check Stadium Navigation for the nearest one."},
+    {keywords:"weather rain forecast", answer:"Check the Weather Alerts section for the latest advisory — covered seating is available in every stand."}
+  ]
+};
+
+/* live-editable state, seeded from demo, swapped for API data if available */
+let state = { crowd:[...demo.crowd], parking:[...demo.parking], seats:[...demo.seats],
+  cart:[], orders:[], tickets:[], sos:[...demo.lostfound?[]:[]], sosRequests:[], lf:[...demo.lostfound],
+  notifications:[...demo.notifications], feedback:[], rating:0, ticketsRevenue:0, foodRevenue:0, parkingRevenue:0 };
+
+/* ============ API HELPER (tries live backend, falls back silently) ============ */
+async function api(path, opts={}){
+  try{
+    const res = await fetch(API_BASE + path, {
+      headers:{"Content-Type":"application/json", ...(opts.headers||{})},
+      ...opts, signal: AbortSignal.timeout(2500)
+    });
+    const body = await res.json();
+    if(!res.ok) throw new Error(body.message || "Request failed");
+    return body.data;
+  }catch(e){
+    throw e;
+  }
+}
+
+async function checkHealth(manual=false){
+  const dot = document.getElementById("connDot"), txt = document.getElementById("connText");
+  try{
+    const data = await api("/health");
+    LIVE_API = true;
+    dot.classList.add("live"); txt.textContent = "live API connected";
+    document.getElementById("healthStatus").innerHTML = `<span class="tag tag-turf">${data.status}</span>`;
+    document.getElementById("healthDb").innerHTML = `<span class="tag ${data.database==='up'?'tag-turf':'tag-crimson'}">${data.database}</span>`;
+    document.getElementById("healthVersion").textContent = data.version;
+    document.getElementById("healthTime").textContent = new Date(data.timestamp).toLocaleTimeString();
+    if(manual) toast("Connected to live API at " + API_BASE);
+  }catch(e){
+    LIVE_API = false;
+    dot.classList.remove("live"); txt.textContent = "demo data (API offline)";
+    document.getElementById("healthStatus").innerHTML = `<span class="tag tag-amber">unreachable</span>`;
+    document.getElementById("healthDb").innerHTML = `<span class="tag tag-dim">—</span>`;
+    document.getElementById("healthVersion").textContent = "—";
+    document.getElementById("healthTime").textContent = new Date().toLocaleTimeString();
+    if(manual) toast("API not reachable — showing sample data", true);
+  }
+}
+
+/* ============ 1. ASSISTANT ============ */
+function tokenize(t){ return new Set((t.toLowerCase().match(/[a-z0-9]+/g)||[])); }
+function botReply(query){
+  const qt = tokenize(query);
+  let best=null, bestScore=0;
+  demo.faq.forEach(f=>{
+    const ft = tokenize(f.keywords);
+    const overlap = [...qt].filter(x=>ft.has(x));
+    const union = new Set([...qt,...ft]);
+    const score = union.size ? overlap.length/union.size : 0;
+    if(score>bestScore){bestScore=score; best=f;}
+  });
+  if(best && bestScore>=0.12) return {answer:best.answer, matched:true, confidence:bestScore.toFixed(2)};
+  return {answer:"I couldn't find a specific answer to that — try the Stadium Information section, or ask a staff member.", matched:false, confidence:"0.00"};
+}
+function addMsg(text, who, conf){
+  const w = document.getElementById("chatWindow");
+  const d = document.createElement("div");
+  d.className = "msg " + who;
+  d.innerHTML = esc(text) + (conf!==undefined ? `<span class="conf">confidence ${conf}</span>` : "");
+  w.appendChild(d); w.scrollTop = w.scrollHeight;
+}
+async function askAssistant(){
+  const input = document.getElementById("chatInput");
+  const q = input.value.trim();
+  if(!q) return;
+  addMsg(q, "user"); input.value = "";
+  if(LIVE_API){
+    try{
+      const data = await api("/assistant/ask", {method:"POST", body:JSON.stringify({query:q})});
+      addMsg(data.answer, "bot", data.confidence); return;
+    }catch(e){ /* fall through to demo */ }
+  }
+  const r = botReply(q);
+  setTimeout(()=>addMsg(r.answer, "bot", r.confidence), 280);
+}
+addMsg("Hi! Ask me about parking, food, tickets, lost items, restrooms or emergencies.", "bot");
+
+/* ============ 2. NAVIGATION ============ */
+function renderNav(){
+  document.getElementById("navList").innerHTML = demo.nav.map(p=>
+    `<div class="list-item"><span>${esc(p.name)}</span><span class="tag tag-blue">${esc(p.zone)}</span></div>`).join("");
+  const opts = demo.nav.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  document.getElementById("navFrom").innerHTML = opts;
+  document.getElementById("navTo").innerHTML = demo.nav.map(p=>`<option value="${p.id}" ${p.id===4?'selected':''}>${esc(p.name)}</option>`).join("");
+}
+function calcRoute(){
+  const from = demo.nav.find(p=>p.id==document.getElementById("navFrom").value);
+  const to = demo.nav.find(p=>p.id==document.getElementById("navTo").value);
+  const mins = (Math.abs(from.id-to.id)*0.7 + 0.5).toFixed(1);
+  document.getElementById("routeResult").innerHTML =
+    `<div class="list-item"><span>${esc(from.name)} → ${esc(to.name)}</span><span class="tag tag-turf">${mins} min walk</span></div>`;
+}
+renderNav();
+
+/* ============ 3. TICKETS ============ */
+function ticketCode(){ return "TCKT-" + Math.random().toString(16).slice(2,14).toUpperCase(); }
+let currentTicket = null;
+async function issueTicket(){
+  const name = document.getElementById("tkName").value || "Guest";
+  const seat = document.getElementById("tkSeat").value || "GA";
+  const price = parseFloat(document.getElementById("tkPrice").value)||0;
+  const code = ticketCode();
+  currentTicket = {code, name, seat, price, status:"valid"};
+  state.tickets.push(currentTicket); state.ticketsRevenue += price;
+  document.getElementById("qrArea").innerHTML = `
+    <div id="qrcode"></div>
+    <div>
+      <div style="font-size:13px; margin-bottom:6px;"><strong>${esc(name)}</strong> · seat ${esc(seat)}</div>
+      <div class="mono" style="font-size:12px; color:var(--ink-dim);">${code}</div>
+      <div class="tag tag-turf" style="margin-top:8px;">valid</div>
+    </div>`;
+  new QRCode(document.getElementById("qrcode"), {text: code, width:120, height:120});
+  document.getElementById("verifyBtn").style.display = "block";
+  toast("Ticket issued: " + code);
+  renderAnalytics();
+}
+function verifyTicket(){
+  if(!currentTicket || currentTicket.status==="used"){ toast("Already checked in or no ticket", true); return; }
+  currentTicket.status = "used";
+  document.querySelector("#qrArea .tag").outerHTML = '<div class="tag tag-blue">used — checked in</div>';
+  toast("Checked in successfully");
+}
+
+/* ============ 4. MATCHES ============ */
+function renderMatches(){
+  const live = demo.matches.filter(m=>m.status==="live");
+  const sched = demo.matches.filter(m=>m.status==="scheduled");
+  document.getElementById("liveList").innerHTML = live.length ? live.map(m=>
+    `<div class="list-item"><span>${esc(m.home_team)} ${m.home_score}–${m.away_score} ${esc(m.away_team)}</span><span class="tag tag-crimson">${m.current_minute}′ live</span></div>`
+  ).join("") : `<div class="empty">No live matches right now</div>`;
+  document.getElementById("scheduleList").innerHTML = sched.map(m=>
+    `<div class="list-item"><span>${esc(m.home_team)} vs ${esc(m.away_team)}</span><span class="tag tag-dim">${esc(m.scheduled_time)}</span></div>`
+  ).join("");
+}
+renderMatches();
+
+/* ============ 5. CROWD ============ */
+function riskColor(pct){ return pct>=90?"var(--crimson)":pct>=75?"var(--amber)":pct>=50?"var(--blue)":"var(--turf)"; }
+function riskLabel(pct){ return pct>=90?"critical":pct>=75?"high":pct>=50?"moderate":"normal"; }
+function renderCrowd(){
+  document.getElementById("crowdCard").innerHTML = state.crowd.map(z=>`
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>${esc(z.zone)}</span><span class="mono" style="color:${riskColor(z.pct)}">${z.pct}% · ${riskLabel(z.pct)}</span></div>
+      <div class="gauge-track"><div class="gauge-fill" style="width:${z.pct}%; background:${riskColor(z.pct)}"></div></div>
+    </div>`).join("");
+}
+renderCrowd();
+setInterval(()=>{
+  state.crowd = state.crowd.map(z=>({...z, pct: Math.max(5, Math.min(99, z.pct + (Math.random()*10-5)|0))}));
+  renderCrowd();
+}, 5000);
+
+/* ============ 6. PARKING ============ */
+let selectedSlot = null;
+function renderParking(){
+  const grid = document.getElementById("parkGrid");
+  grid.innerHTML = state.parking.map((s,i)=>{
+    const cls = s.occupied ? "occupied" : (selectedSlot===i ? "selected" : "available");
+    return `<div class="seat ${cls}" onclick="pickSlot(${i})" title="${s.slot}">${s.slot.split('-')[1]}</div>`;
+  }).join("");
+  const occ = state.parking.filter(s=>s.occupied).length;
+  document.getElementById("parkSummary").textContent = `${state.parking.length-occ} of ${state.parking.length} open`;
+  document.getElementById("pkSelected").textContent = selectedSlot!==null ? "· " + state.parking[selectedSlot].slot : "";
+}
+function pickSlot(i){
+  if(state.parking[i].occupied){
+    state.parking[i].occupied = false;
+    toast("Released " + state.parking[i].slot);
+  } else {
+    selectedSlot = i;
+  }
+  renderParking();
+}
+function bookParking(){
+  if(selectedSlot===null){ toast("Select an available slot first", true); return; }
+  if(!document.getElementById("pkVehicle").value){ toast("Enter a vehicle number", true); return; }
+  state.parking[selectedSlot].occupied = true;
+  state.parkingRevenue += 5;
+  toast("Booked " + state.parking[selectedSlot].slot);
+  selectedSlot = null;
+  renderParking(); renderAnalytics();
+}
+renderParking();
+
+/* ============ 7. FOOD ============ */
+function renderMenu(){
+  document.getElementById("menuList").innerHTML = demo.menu.map(m=>
+    `<div class="list-item"><span>${esc(m.name)} <span class="meta">· ${esc(m.category)}</span></span>
+     <span style="display:flex; align-items:center; gap:10px;"><span class="mono">${money(m.price)}</span>
+     <button class="btn-ghost" style="padding:5px 10px;" onclick="addToCart(${m.id})">Add</button></span></div>`).join("");
+}
+function addToCart(id){
+  const item = demo.menu.find(m=>m.id===id);
+  const existing = state.cart.find(c=>c.id===id);
+  if(existing) existing.qty++; else state.cart.push({...item, qty:1});
+  renderCart();
+}
+function renderCart(){
+  const list = document.getElementById("cartList");
+  list.innerHTML = state.cart.length ? state.cart.map(c=>
+    `<div class="list-item"><span>${esc(c.name)} × ${c.qty}</span><span class="mono">${money(c.price*c.qty)}</span></div>`).join("")
+    : `<div class="empty">Cart is empty</div>`;
+  const total = state.cart.reduce((s,c)=>s+c.price*c.qty,0);
+  document.getElementById("cartTotal").textContent = money(total);
+}
+function placeOrder(){
+  if(!state.cart.length){ toast("Add something to your cart first", true); return; }
+  const total = state.cart.reduce((s,c)=>s+c.price*c.qty,0);
+  state.foodRevenue += total; state.orders.push({items:[...state.cart], total});
+  toast("Order placed — total " + money(total));
+  state.cart = []; renderCart(); renderAnalytics();
+}
+renderMenu(); renderCart();
+
+/* ============ 8. WEATHER ============ */
+function renderWeather(){
+  const sev = {low:"tag-turf", moderate:"tag-blue", high:"tag-amber", severe:"tag-crimson"};
+  document.getElementById("weatherList").innerHTML = demo.weather.map(w=>
+    `<div class="card"><div class="row"><h3>${esc(w.title)}</h3><span class="tag ${sev[w.severity]}">${w.severity}</span></div><p style="margin-top:6px;">${esc(w.description)}</p></div>`
+  ).join("");
+}
+renderWeather();
+
+/* ============ 9. SOS ============ */
+function renderSOS(){
+  document.getElementById("sosList").innerHTML = state.sosRequests.length ? state.sosRequests.map(s=>
+    `<div class="list-item"><span>${esc(s.name)} · ${esc(s.type)} <span class="meta">${esc(s.loc)}</span></span><span class="tag tag-crimson">${s.status}</span></div>`
+  ).join("") : `<div class="empty">No active requests</div>`;
+}
+function sendSOS(){
+  const req = {
+    name: document.getElementById("sosName").value || "Anonymous",
+    type: document.getElementById("sosType").value,
+    loc: document.getElementById("sosLoc").value || "Unknown",
+    status: "open"
+  };
+  state.sosRequests.unshift(req);
+  toast("SOS sent — help is on the way", false);
+  renderSOS();
+}
+renderSOS();
+
+/* ============ 10. LOST & FOUND ============ */
+function renderLF(){
+  const q = (document.getElementById("lfSearch").value||"").toLowerCase();
+  const items = state.lf.filter(i=>i.item_name.toLowerCase().includes(q));
+  document.getElementById("lfList").innerHTML = items.length ? items.map(i=>
+    `<div class="list-item"><span>${esc(i.item_name)} <span class="meta">${esc(i.location)}</span></span>
+     <span class="tag ${i.item_type==='lost'?'tag-crimson':'tag-turf'}">${i.item_type}</span></div>`).join("")
+    : `<div class="empty">No matches</div>`;
+}
+function reportItem(){
+  const name = document.getElementById("lfItem").value.trim();
+  if(!name){ toast("Describe the item first", true); return; }
+  state.lf.unshift({item_type: document.getElementById("lfType").value, item_name:name, location: document.getElementById("lfLoc").value||"Unknown", status:"reported"});
+  document.getElementById("lfItem").value=""; renderLF();
+  toast("Item reported");
+}
+renderLF();
+
+/* ============ 11. NOTIFICATIONS ============ */
+function renderNotif(){
+  document.getElementById("notifList").innerHTML = state.notifications.map((n,i)=>
+    `<div class="list-item" style="cursor:pointer;" onclick="markRead(${i})">
+       <span>${!n.read?'<span class="dot live" style="display:inline-block; margin-right:8px;"></span>':''}<strong>${esc(n.title)}</strong> — ${esc(n.message)}</span>
+       <span class="tag tag-dim">${esc(n.category)}</span>
+     </div>`).join("");
+}
+function markRead(i){ state.notifications[i].read = true; renderNotif(); }
+renderNotif();
+
+/* ============ 12. SEATS ============ */
+function renderSeats(){
+  const q = (document.getElementById("seatSearch").value||"").toLowerCase();
+  const accOnly = document.getElementById("seatAccessible").checked;
+  let list = state.seats.filter(s=>s.seat.toLowerCase().includes(q));
+  if(accOnly) list = list.filter(s=>s.accessible);
+  document.getElementById("seatGrid").innerHTML = list.slice(0,60).map(s=>
+    `<div class="seat ${s.occupied?'occupied':'available'}" title="${s.seat} · ${s.section}${s.accessible?' · accessible':''}">${s.seat}</div>`).join("")
+    || `<div class="empty">No seats match</div>`;
+}
+renderSeats();
+
+/* ============ 13. INFO ============ */
+function renderInfo(){
+  document.getElementById("infoAccordion").innerHTML = demo.info.map((f,i)=>`
+    <div class="accordion-item" id="acc${i}">
+      <div class="accordion-head" onclick="toggleAcc(${i})"><span>${esc(f.title)}</span><span class="chev">+</span></div>
+      <div class="accordion-body"><inner>${esc(f.content)}</inner></div>
+    </div>`).join("");
+  document.getElementById("amenityList").innerHTML = demo.amenities.map(a=>
+    `<div class="list-item"><span>${esc(a.name)}</span><span class="meta">${esc(a.location)}</span></div>`).join("");
+}
+function toggleAcc(i){ document.getElementById("acc"+i).classList.toggle("open"); }
+renderInfo();
+
+/* ============ 14. FEEDBACK ============ */
+function renderStars(){
+  document.getElementById("starRow").innerHTML = [1,2,3,4,5].map(n=>
+    `<span class="star ${n<=state.rating?'on':''}" onclick="setRating(${n})">★</span>`).join("");
+}
+function setRating(n){ state.rating = n; renderStars(); }
+function submitFeedback(){
+  if(!state.rating){ toast("Pick a star rating first", true); return; }
+  state.feedback.push({rating: state.rating, comment: document.getElementById("fbComment").value});
+  toast("Thanks for your feedback!");
+  state.rating = 0; document.getElementById("fbComment").value=""; renderStars(); renderAnalytics();
+}
+renderStars();
+
+/* ============ 15. ANALYTICS ============ */
+function renderAnalytics(){
+  const kpis = [
+    ["Tickets issued", state.tickets.length],
+    ["Food orders", state.orders.length],
+    ["Parking booked", state.parking.filter(s=>s.occupied).length],
+    ["Avg. rating", state.feedback.length ? (state.feedback.reduce((s,f)=>s+f.rating,0)/state.feedback.length).toFixed(1) : "—"]
+  ];
+  document.getElementById("kpiGrid").innerHTML = kpis.map(([label,val])=>
+    `<div class="card"><p style="text-transform:uppercase; font-size:10.5px; letter-spacing:.08em;">${label}</p><h3 class="display" style="font-size:30px; margin-top:4px;">${val}</h3></div>`).join("");
+
+  const rev = [["Tickets",state.ticketsRevenue],["Food",state.foodRevenue],["Parking",state.parkingRevenue]];
+  const maxRev = Math.max(1, ...rev.map(r=>r[1]));
+  document.getElementById("barRevenue").innerHTML = rev.map(([label,val])=>
+    `<div class="bar-col"><div class="bar" style="height:${(val/maxRev*100)||2}%"></div><span>${label}<br>${money(val)}</span></div>`).join("");
+
+  const dist = [1,2,3,4,5].map(n=>state.feedback.filter(f=>f.rating===n).length);
+  const maxDist = Math.max(1,...dist);
+  document.getElementById("barRating").innerHTML = dist.map((v,i)=>
+    `<div class="bar-col"><div class="bar" style="height:${(v/maxDist*100)||2}%"></div><span>${i+1}★<br>${v}</span></div>`).join("");
+}
+renderAnalytics();
+
+/* ============ 16. ADMIN ============ */
+async function loadAdmin(){
+  const key = document.getElementById("adminKey").value;
+  if(LIVE_API){
+    try{
+      const data = await api("/admin/overview", {headers:{"X-Admin-Key":key}});
+      document.getElementById("adminList").innerHTML = Object.entries(data).map(([k,v])=>
+        `<div class="list-item"><span>${k.replace(/_/g,' ')}</span><span class="mono">${v}</span></div>`).join("");
+      toast("Admin overview loaded from live API"); return;
+    }catch(e){ toast(e.message || "Admin key rejected", true); return; }
+  }
+  if(!key){ toast("Enter the admin key", true); return; }
+  const overview = {
+    total_matches: demo.matches.length,
+    total_tickets: state.tickets.length,
+    total_parking_slots: state.parking.length,
+    active_parking_bookings: state.parking.filter(s=>s.occupied).length,
+    total_food_orders: state.orders.length,
+    open_sos_requests: state.sosRequests.filter(s=>s.status==="open").length,
+    total_lost_found_items: state.lf.length,
+    average_feedback_rating: state.feedback.length ? (state.feedback.reduce((s,f)=>s+f.rating,0)/state.feedback.length).toFixed(2) : 0
+  };
+  document.getElementById("adminList").innerHTML = Object.entries(overview).map(([k,v])=>
+    `<div class="list-item"><span>${k.replace(/_/g,' ')}</span><span class="mono">${v}</span></div>`).join("");
+  toast("Showing sample admin overview (demo mode)");
+}
+
+/* ============ SCOREBOARD TICKER ============ */
+function tickScoreboard(){
+  const m = demo.matches.find(m=>m.status==="live");
+  if(!m) return;
+  document.getElementById("sbHome").textContent = m.home_team;
+  document.getElementById("sbAway").textContent = m.away_team;
+  document.getElementById("sbHomeScore").textContent = m.home_score;
+  document.getElementById("sbAwayScore").textContent = m.away_score;
+  document.getElementById("sbMinute").textContent = m.current_minute + "′";
+}
+tickScoreboard();
+setInterval(()=>{
+  const m = demo.matches.find(m=>m.status==="live");
+  if(m && m.current_minute < 90){ m.current_minute++; if(Math.random()<0.02) m.home_score++; tickScoreboard(); renderMatches(); }
+}, 4000);
+
+/* ============ INIT ============ */
+checkHealth();
+setInterval(checkHealth, 15000);
+</script>
+</body>
+</html>
